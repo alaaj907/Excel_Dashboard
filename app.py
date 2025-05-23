@@ -21,7 +21,9 @@ def summarize_data(df):
     return group_summary
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file, sheet_name="Index Report")
+    xls = pd.ExcelFile(uploaded_file)
+    sheet = xls.sheet_names[0]  # Use the first sheet by default
+    df = pd.read_excel(xls, sheet_name=sheet)
     df = clean_dataframe(df)
 
     st.markdown("### Key Metrics")
@@ -51,4 +53,4 @@ if uploaded_file:
     st.markdown("### Full Data Table")
     st.dataframe(df)
 else:
-    st.info("Please upload an Excel file with an 'Index Report' sheet to begin.")
+    st.info("Please upload an Excel file to begin.")
