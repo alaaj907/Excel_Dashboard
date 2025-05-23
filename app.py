@@ -47,7 +47,9 @@ if uploaded_file:
     kpi4.metric("Attribute Groups", df['attribute_group'].nunique())
 
     st.markdown("### Filter by Group")
-    group_filter = st.selectbox("Select Attribute Group", options=['All'] + sorted(df['attribute_group'].unique()))
+    df['attribute_group'] = df['attribute_group'].fillna('Unknown').astype(str)
+    group_options = ['All'] + sorted(df['attribute_group'].unique())
+    group_filter = st.selectbox("Select Attribute Group", options=group_options)
     if group_filter != 'All':
         df = df[df['attribute_group'] == group_filter]
 
