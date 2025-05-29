@@ -1,80 +1,89 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-st.set_page_config(page_title="Audience Analytics Dashboard", layout="wide")
-st.title("Audience Analytics Dashboard")
-st.markdown("""
-<style>
-    .css-1d391kg { padding-top: 1rem; }
-    .css-1v0mbdj { padding-top: 0rem; }
-    .main .block-container { padding-top: 2rem; }
-    .reportview-container .markdown-text-container p {
-        font-size: 1.1rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="Enhanced Audience Dashboard", layout="wide")
 
-uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
+st.title("📊 Enhanced Audience Dashboard")
 
-def clean_dataframe(df):
-    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('&', 'and')
-    return df
-
-def summarize_data(df):
-    group_summary = df.groupby('attribute_group').agg(
-        count=('attribute_name', 'count'),
-        avg_index=('index', 'mean'),
-        avg_lift=('relative_lift', 'mean'),
-        total_size=('attribute_size', 'sum')
-    ).reset_index().sort_values(by='avg_index', ascending=False)
-    return group_summary
-
-def download_excel(df):
-    return df.to_csv(index=False).encode('utf-8')
-
+uploaded_file = st.file_uploader("Upload Excel File", type=[".xlsx"])
 if uploaded_file:
+    # Read Excel file and allow user to pick a sheet
     xls = pd.ExcelFile(uploaded_file)
-    sheet = xls.sheet_names[0]
-    df = pd.read_excel(xls, sheet_name=sheet)
-    df = clean_dataframe(df)
+    sheet_name = st.selectbox("Select a sheet", xls.sheet_names)
+    df = pd.read_excel(xls, sheet_name=sheet_name)
 
-    st.markdown("### Key Metrics")
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("Total Attributes", len(df))
-    kpi2.metric("Avg Index Score", f"{df['index'].mean():.1f}")
-    kpi3.metric("High Performers (Index > 120)", (df['index'] > 120).sum())
-    kpi4.metric("Attribute Groups", df['attribute_group'].nunique())
+    # Display raw data
+    with st.expander("🔍 Preview Raw Data"):
+        st.dataframe(df.head(20))
 
-    st.markdown("### Filter by Group")
-    df['attribute_group'] = df['attribute_group'].fillna('Unknown').astype(str)
-    group_options = ['All'] + sorted(df['attribute_group'].unique())
-    group_filter = st.selectbox("Select Attribute Group", options=group_options)
-    if group_filter != 'All':
-        df = df[df['attribute_group'] == group_filter]
+    # Normalize column names
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_").str.replace("%", "percent")
 
-    st.markdown("### Top Performing Attributes")
-    top_performers = df.sort_values(by='index', ascending=False).head(10)
-    fig_bar = px.bar(top_performers, x='attribute_name', y='index', color='attribute_group',
-                     labels={'index': 'Index Score'}, height=400)
-    st.plotly_chart(fig_bar, use_container_width=True)
+    # Audience percentage binning
+    if 'audience' in df.columns:
+        df['audience_bin'] = pd.cut(df['audience'], bins=[0, 10, 25, 50, 75, 90, 99, 100],
+                                    labels=["0–10%", "10–25%", "25–50%", "50–75%", "75–90%", "90–99%", "99–100%"])
 
-    st.markdown("### Group Performance Summary")
-    group_summary = summarize_data(df)
-    fig_pie = px.pie(group_summary.head(8), values='count', names='attribute_group',
-                     title='Top Attribute Groups by Count')
-    st.plotly_chart(fig_pie, use_container_width=True)
+    # Descriptive statistics
+    with st.expander("📈 Descriptive Statistics"):
+        desc_stats = df.describe(include='all')
+        st.dataframe(desc_stats)
+        if 'index' in df.columns and 'relative_lift' in df.columns:
+            stats_df = pd.DataFrame({
+                'Metric': ['Index', 'Relative Lift'],
+                'Mean': [df['index'].mean(), df['relative_lift'].mean()],
+                'Std': [df['index'].std(), df['relative_lift'].std()]
+            })
+            fig, ax = plt.subplots()
+            stats_df.set_index("Metric")[['Mean', 'Std']].plot(kind='bar', ax=ax)
+            st.pyplot(fig)
 
-    st.markdown("### Index vs Relative Lift")
-    fig_scatter = px.scatter(df, x='index', y='relative_lift', color='attribute_group',
-                             hover_data=['attribute_name'], height=400)
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    # Statistical Highlighting
+    st.subheader("✨ Highlighted Data Table")
+    highlight_cols = ['index', 'relative_lift']
+    means = df[highlight_cols].mean()
+    stds = df[highlight_cols].std()
 
-    st.markdown("### Full Data Table")
-    st.dataframe(df)
+    def highlight_outliers(val, col):
+        if col in highlight_cols:
+            if abs(val - means[col]) > 2 * stds[col]:
+                return 'background-color: yellow'
+        return ''
 
-    csv_data = download_excel(df)
-    st.download_button("Download Filtered Data as CSV", data=csv_data, file_name="filtered_data.csv", mime="text/csv")
+    styled_df = df.style.applymap(lambda val: highlight_outliers(val, 'index'), subset=['index']) \
+                        .applymap(lambda val: highlight_outliers(val, 'relative_lift'), subset=['relative_lift'])
+    st.dataframe(styled_df, use_container_width=True)
 
+    # Primary Pie Chart (e.g., attribute group proportions)
+    if 'attribute_group' in df.columns:
+        st.subheader("🧩 Attribute Group Distribution")
+        group_counts = df['attribute_group'].value_counts()
+        fig1, ax1 = plt.subplots()
+        ax1.pie(group_counts, labels=group_counts.index, autopct='%1.1f%%', startangle=90)
+        ax1.axis('equal')
+        st.pyplot(fig1)
+
+    # Secondary Pie Chart: Unique ID counts by audience bin
+    if 'audience_bin' in df.columns:
+        st.subheader("🥧 Audience Bin Distribution (by count)")
+        bin_counts = df['audience_bin'].value_counts().sort_index()
+        fig2, ax2 = plt.subplots()
+        ax2.pie(bin_counts, labels=bin_counts.index, autopct='%1.1f%%', startangle=90)
+        ax2.axis('equal')
+        st.pyplot(fig2)
+
+    # Volume Analysis by Segment
+    if 'attribute_group' in df.columns and 'audience_bin' in df.columns:
+        st.subheader("🔬 Volume Analysis by Segment and Audience Bin")
+        volume_df = df.groupby(['attribute_group', 'audience_bin']).size().unstack(fill_value=0)
+        st.dataframe(volume_df)
+
+        st.subheader("📊 Heatmap of ID Volume by Segment")
+        fig3, ax3 = plt.subplots(figsize=(10, 6))
+        sns.heatmap(volume_df, cmap="YlGnBu", annot=True, fmt="d")
+        st.pyplot(fig3)
 else:
-    st.info("Please upload an Excel file to begin.")
+    st.info("👈 Please upload an Excel file to get started.")
