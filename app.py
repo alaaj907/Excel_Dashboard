@@ -1,4 +1,60 @@
-import streamlit as st
+if st.sidebar.button("🎯 Generate Executive Presentation", type="primary"):
+                with st.spinner("Creating comprehensive presentation with all charts and analytics..."):
+                    try:
+                        # Create all charts for PowerPoint
+                        charts_data = create_comprehensive_charts(df)
+                        
+                        # Generate comprehensive insights
+                        comprehensive_insights = analyze_audience_insights(df)
+                        
+                        # Add additional insights
+                        geo_data = df[df['attribute_group'].str.contains('State|Geographic|Census', case=False, na=False)]
+                        if not geo_data.empty:
+                            top_geo_insights = geo_data.nlargest(5, 'index')
+                            comprehensive_insights['geographic_insights'] = [
+                                f"{row['attribute_name']}: {row['index']:.1f}" 
+                                for _, row in top_geo_insights.iterrows()
+                            ]
+                        
+                        # Generate comprehensive PPT with all features
+                        ppt_path = create_comprehensive_ppt(df, charts_data, comprehensive_insights)
+                        
+                        st.success("✅ Comprehensive executive presentation generated with all charts and analytics!")
+                        st.info("📊 Includes: Performance analysis, income profiling, geographic mapping, category rankings, family insights, and strategic recommendations across 4 professional slides")
+                        
+                        # Provide download
+                        with open(ppt_path, "rb") as file:
+                            st.sidebar.download_button(
+                                label="📥 Download Complete Executive Presentation",
+                                data=file,
+                                file_name="Complete_Audience_Analytics_Executive_Presentation.pptx",
+                                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                            )
+                        
+                        # Show what's included in the presentation
+                        st.sidebar.markdown("**📋 Presentation Includes:**")
+                        st.sidebar.markdown("• **Slide 1**: Executive Dashboard with performance distribution & key insights")
+                        st.sidebar.markdown("• **Slide 2**: Income profiling & geographic performance analysis")
+                        st.sidebar.markdown("• **Slide 3**: Category rankings & family lifecycle analysis")
+                        st.sidebar.markdown("• **Slide 4**: Strategic recommendations & KPIs")
+                        
+                        # Clean up temporary files
+                        try:
+                            os.unlink(ppt_path)
+                            for key in charts_data:
+                                if os.path.exists(charts_data[key]):
+                                    os.unlink(charts_data[key])
+                        except:
+                            pass
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error generating presentation: {str(e)}")
+                        st.write("Please check your data format and try again.")
+                        
+                        # Show detailed error for debugging
+                        import traceback
+                        if st.sidebar.checkbox("Show detailed error"):
+                            st.sidebar.code(traceback.format_exc())import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -53,9 +109,162 @@ def create_performance_buckets(df):
     }
     return buckets
 
+def create_comprehensive_charts(df):
+    """Create all charts for PowerPoint inclusion"""
+    charts_data = {}
+    
+    # 1. Performance Distribution Chart
+    performance_buckets = create_performance_buckets(df)
+    bucket_counts = {
+        'Very High (>150)': len(performance_buckets['very_high']),
+        'High (120-150)': len(performance_buckets['high']),
+        'Medium (80-120)': len(performance_buckets['medium']),
+        'Low (<80)': len(performance_buckets['low'])
+    }
+    
+    fig_performance = px.pie(
+        values=list(bucket_counts.values()),
+        names=list(bucket_counts.keys()),
+        title="Performance Distribution",
+        color_discrete_sequence=['#dc3545', '#fd7e14', '#ffc107', '#6c757d']
+    )
+    fig_performance.update_traces(textposition='inside', textinfo='percent+label')
+    fig_performance.update_layout(font_size=14, title_font_size=16)
+    
+    performance_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    fig_performance.write_image(performance_temp.name, width=500, height=400)
+    charts_data['performance_chart'] = performance_temp.name
+    
+    # 2. Income Profile Chart
+    if 'attribute_group' in df.columns:
+        income_data = df[df['attribute_group'].str.contains('Income', na=False)]
+        if not income_data.empty:
+            income_sorted = income_data.sort_values('index', ascending=True)
+            
+            fig_income = go.Figure()
+            fig_income.add_trace(go.Bar(
+                y=income_sorted['attribute_name'],
+                x=income_sorted['index'],
+                orientation='h',
+                marker_color='#dc3545',
+                text=income_sorted['index'].round(1),
+                textposition='outside'
+            ))
+            
+            fig_income.update_layout(
+                title="Income Segments Performance",
+                xaxis_title="Index Score",
+                height=400,
+                margin=dict(l=150, r=50, t=50, b=50),
+                font_size=12
+            )
+            
+            income_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+            fig_income.write_image(income_temp.name, width=600, height=400)
+            charts_data['income_chart'] = income_temp.name
+    
+    # 3. Geographic Performance Chart
+    geo_keywords = ['state', 'census', 'geographic', 'region']
+    geo_data = df[df['attribute_group'].str.contains('|'.join(geo_keywords), case=False, na=False)]
+    
+    if not geo_data.empty:
+        top_geo = geo_data.nlargest(15, 'index')
+        
+        fig_geo = px.bar(
+            top_geo,
+            x='index',
+            y='attribute_name',
+            orientation='h',
+            title='Top 15 Geographic Areas',
+            color='index',
+            color_continuous_scale='RdYlBu_r'
+        )
+        fig_geo.update_layout(height=500, yaxis={'categoryorder': 'total ascending'}, font_size=10)
+        
+        geo_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        fig_geo.write_image(geo_temp.name, width=700, height=500)
+        charts_data['geo_chart'] = geo_temp.name
+    
+    # 4. Category Performance Chart
+    if 'attribute_group' in df.columns:
+        category_stats = df.groupby('attribute_group').agg({
+            'index': ['mean', 'count']
+        }).round(1)
+        
+        category_stats.columns = ['avg_index', 'count']
+        category_stats = category_stats[category_stats['count'] >= 3]
+        category_stats = category_stats.sort_values('avg_index', ascending=False).head(15)
+        category_stats = category_stats.reset_index()
+        
+        fig_category = go.Figure()
+        fig_category.add_trace(go.Bar(
+            x=category_stats['attribute_group'],
+            y=category_stats['avg_index'],
+            marker_color=['#dc3545' if x > 120 else '#ffc107' if x > 100 else '#6c757d' for x in category_stats['avg_index']],
+            text=category_stats['avg_index'],
+            textposition='outside'
+        ))
+        
+        fig_category.update_layout(
+            title="Top 15 Category Performance",
+            xaxis_title="Categories",
+            yaxis_title="Average Index",
+            height=400,
+            xaxis_tickangle=-45,
+            margin=dict(b=150),
+            font_size=10
+        )
+        
+        category_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        fig_category.write_image(category_temp.name, width=800, height=400)
+        charts_data['category_chart'] = category_temp.name
+    
+    # 5. Family Lifecycle Chart
+    family_keywords = ['child', 'children', 'family', 'age', 'parent']
+    family_data = df[df['attribute_group'].str.contains('|'.join(family_keywords), case=False, na=False)]
+    
+    if not family_data.empty:
+        family_grouped = family_data.groupby('attribute_group').agg({
+            'index': 'mean'
+        }).round(1).reset_index()
+        family_grouped.columns = ['attribute_group', 'avg_index']
+        
+        fig_family = px.bar(
+            family_grouped,
+            x='attribute_group',
+            y='avg_index',
+            title='Family Lifecycle Performance',
+            color='avg_index',
+            color_continuous_scale='RdYlBu_r'
+        )
+        fig_family.update_xaxes(tickangle=-45)
+        fig_family.update_layout(height=350, font_size=10)
+        
+        family_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        fig_family.write_image(family_temp.name, width=600, height=350)
+        charts_data['family_chart'] = family_temp.name
+    
+    # 6. Index Distribution Histogram
+    fig_hist = px.histogram(
+        df, x='index', nbins=30,
+        title='Index Score Distribution',
+        labels={'index': 'Index Score', 'count': 'Count'}
+    )
+    fig_hist.add_vline(x=120, line_dash="dash", line_color="red")
+    fig_hist.add_vline(x=80, line_dash="dash", line_color="orange")
+    fig_hist.update_layout(height=350, font_size=10)
+    
+    hist_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    fig_hist.write_image(hist_temp.name, width=500, height=350)
+    charts_data['distribution_chart'] = hist_temp.name
+    
+    return charts_data
+
 def create_comprehensive_ppt(df, charts_data, insights):
-    """Create an enhanced professional PowerPoint presentation"""
+    """Create a comprehensive multi-slide PowerPoint presentation with all features"""
     prs = Presentation()
+    
+    # SLIDE 1: Executive Summary Dashboard
     slide_layout = prs.slide_layouts[6]  # Blank layout
     slide1 = prs.slides.add_slide(slide_layout)
     
@@ -66,12 +275,12 @@ def create_comprehensive_ppt(df, charts_data, insights):
     fill.fore_color.rgb = RGBColor(248, 249, 250)
     
     # Title
-    title_box = slide1.shapes.add_textbox(Inches(0.5), Inches(0.2), Inches(9), Inches(0.8))
+    title_box = slide1.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.6))
     title_frame = title_box.text_frame
     title_frame.text = "Growing Households - Executive Dashboard"
     title_para = title_frame.paragraphs[0]
     title_para.alignment = PP_ALIGN.CENTER
-    title_para.font.size = Pt(32)
+    title_para.font.size = Pt(28)
     title_para.font.bold = True
     title_para.font.color.rgb = RGBColor(220, 53, 69)
     
@@ -79,42 +288,302 @@ def create_comprehensive_ppt(df, charts_data, insights):
     metrics = [
         ("Total Attributes", f"{len(df):,}"),
         ("Avg Index Score", f"{df['index'].mean():.1f}"),
-        ("High Performers", f"{len(df[df['index'] > 120]):,}"),
-        ("Coverage", f"{insights.get('total_audience', 'N/A')}")
+        ("High Performers (>120)", f"{len(df[df['index'] > 120]):,}"),
+        ("Performance Rate", f"{(len(df[df['index'] > 120])/len(df)*100):.1f}%")
     ]
     
     for i, (label, value) in enumerate(metrics):
         x_pos = 0.5 + (i * 2.25)
-        box = slide1.shapes.add_textbox(Inches(x_pos), Inches(1.2), Inches(2), Inches(1))
+        box = slide1.shapes.add_textbox(Inches(x_pos), Inches(0.9), Inches(2), Inches(0.8))
         box_frame = box.text_frame
         box_frame.text = label
-        box_frame.paragraphs[0].font.size = Pt(11)
+        box_frame.paragraphs[0].font.size = Pt(10)
         box_frame.paragraphs[0].font.bold = True
         
         value_para = box_frame.add_paragraph()
         value_para.text = value
-        value_para.font.size = Pt(16)
+        value_para.font.size = Pt(14)
         value_para.font.bold = True
         value_para.font.color.rgb = RGBColor(220, 53, 69)
     
-    # Key insights box
-    insights_box = slide1.shapes.add_textbox(Inches(0.5), Inches(5.8), Inches(9), Inches(1.2))
+    # Add performance distribution chart
+    if 'performance_chart' in charts_data:
+        try:
+            slide1.shapes.add_picture(charts_data['performance_chart'], 
+                                    Inches(0.5), Inches(2), 
+                                    width=Inches(4), height=Inches(3))
+        except: pass
+    
+    # Add index distribution chart
+    if 'distribution_chart' in charts_data:
+        try:
+            slide1.shapes.add_picture(charts_data['distribution_chart'], 
+                                    Inches(5), Inches(2), 
+                                    width=Inches(4), height=Inches(3))
+        except: pass
+    
+    # Key insights section
+    insights_box = slide1.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(9), Inches(1.3))
     insights_frame = insights_box.text_frame
-    insights_frame.text = "KEY INSIGHTS"
+    insights_frame.text = "KEY INSIGHTS & RECOMMENDATIONS"
     insights_frame.paragraphs[0].font.size = Pt(14)
     insights_frame.paragraphs[0].font.bold = True
+    insights_frame.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
     
     key_insights = [
-        f"• Growing households show strong affinity (Index: {insights.get('top_index', 'N/A')})",
-        "• Lower-middle income segments over-index significantly",
-        "• Young families with children 0-2 are primary targets",
-        f"• {insights.get('high_performer_count', 0)} attributes exceed 120 index threshold"
+        f"• Primary Opportunity: {insights.get('top_attribute', 'Growing Households')} (Index: {insights.get('top_index', 'N/A')})",
+        f"• {insights.get('high_performer_count', 0)} high-performing attributes drive strategic focus",
+        "• Lower-middle income households ($15K-$75K) show highest affinity",
+        "• Young families with children 0-2 represent prime targeting opportunity",
+        f"• {len(df[df['index'] < 80])} low performers offer immediate optimization potential"
     ]
     
     for insight in key_insights:
         para = insights_frame.add_paragraph()
         para.text = insight
         para.font.size = Pt(10)
+        para.font.color.rgb = RGBColor(50, 50, 50)
+    
+    # SLIDE 2: Income & Geographic Analysis
+    slide2 = prs.slides.add_slide(slide_layout)
+    slide2.background.fill.solid()
+    slide2.background.fill.fore_color.rgb = RGBColor(248, 249, 250)
+    
+    # Title
+    title_box2 = slide2.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.6))
+    title_frame2 = title_box2.text_frame
+    title_frame2.text = "Income Profile & Geographic Performance Analysis"
+    title_frame2.paragraphs[0].alignment = PP_ALIGN.CENTER
+    title_frame2.paragraphs[0].font.size = Pt(24)
+    title_frame2.paragraphs[0].font.bold = True
+    title_frame2.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Income chart
+    if 'income_chart' in charts_data:
+        try:
+            slide2.shapes.add_picture(charts_data['income_chart'], 
+                                    Inches(0.5), Inches(0.9), 
+                                    width=Inches(4.5), height=Inches(3))
+        except: pass
+    
+    # Geographic chart
+    if 'geo_chart' in charts_data:
+        try:
+            slide2.shapes.add_picture(charts_data['geo_chart'], 
+                                    Inches(5.2), Inches(0.9), 
+                                    width=Inches(4.3), height=Inches(3.5))
+        except: pass
+    
+    # Income insights
+    income_box = slide2.shapes.add_textbox(Inches(0.5), Inches(4.2), Inches(4.5), Inches(1.5))
+    income_frame = income_box.text_frame
+    income_frame.text = "INCOME TARGETING STRATEGY"
+    income_frame.paragraphs[0].font.size = Pt(12)
+    income_frame.paragraphs[0].font.bold = True
+    income_frame.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Calculate income insights
+    if 'attribute_group' in df.columns:
+        income_data = df[df['attribute_group'].str.contains('Income', na=False)]
+        if not income_data.empty:
+            top_income = income_data.loc[income_data['index'].idxmax()]
+            income_insights = [
+                f"• Top Segment: {top_income['attribute_name']} (Index: {top_income['index']:.1f})",
+                f"• {len(income_data[income_data['index'] > 120])} income brackets exceed threshold",
+                "• Inverse relationship: Lower income = Higher performance",
+                "• Focus budget on $15K-$75K household segments"
+            ]
+        else:
+            income_insights = ["• Income data analysis not available"]
+    else:
+        income_insights = ["• Income data analysis not available"]
+    
+    for insight in income_insights:
+        para = income_frame.add_paragraph()
+        para.text = insight
+        para.font.size = Pt(9)
+    
+    # Geographic insights
+    geo_box = slide2.shapes.add_textbox(Inches(5.2), Inches(4.7), Inches(4.3), Inches(1.5))
+    geo_frame = geo_box.text_frame
+    geo_frame.text = "GEOGRAPHIC OPPORTUNITIES"
+    geo_frame.paragraphs[0].font.size = Pt(12)
+    geo_frame.paragraphs[0].font.bold = True
+    geo_frame.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Calculate geographic insights
+    geo_keywords = ['state', 'census', 'geographic', 'region']
+    geo_data = df[df['attribute_group'].str.contains('|'.join(geo_keywords), case=False, na=False)]
+    
+    if not geo_data.empty:
+        top_geo = geo_data.loc[geo_data['index'].idxmax()]
+        geo_insights = [
+            f"• Top Market: {top_geo['attribute_name']} (Index: {top_geo['index']:.1f})",
+            f"• {len(geo_data[geo_data['index'] > 120])} high-performing regions",
+            f"• Geographic index range: {geo_data['index'].min():.1f} - {geo_data['index'].max():.1f}",
+            "• Implement geo-fencing in top markets"
+        ]
+    else:
+        geo_insights = ["• Geographic data analysis not available"]
+    
+    for insight in geo_insights:
+        para = geo_frame.add_paragraph()
+        para.text = insight
+        para.font.size = Pt(9)
+    
+    # SLIDE 3: Category Performance & Family Analysis
+    slide3 = prs.slides.add_slide(slide_layout)
+    slide3.background.fill.solid()
+    slide3.background.fill.fore_color.rgb = RGBColor(248, 249, 250)
+    
+    # Title
+    title_box3 = slide3.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.6))
+    title_frame3 = title_box3.text_frame
+    title_frame3.text = "Category Performance & Family Lifecycle Analysis"
+    title_frame3.paragraphs[0].alignment = PP_ALIGN.CENTER
+    title_frame3.paragraphs[0].font.size = Pt(24)
+    title_frame3.paragraphs[0].font.bold = True
+    title_frame3.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Category performance chart
+    if 'category_chart' in charts_data:
+        try:
+            slide3.shapes.add_picture(charts_data['category_chart'], 
+                                    Inches(0.5), Inches(0.9), 
+                                    width=Inches(9), height=Inches(3))
+        except: pass
+    
+    # Family chart
+    if 'family_chart' in charts_data:
+        try:
+            slide3.shapes.add_picture(charts_data['family_chart'], 
+                                    Inches(0.5), Inches(4.2), 
+                                    width=Inches(4.5), height=Inches(2.5))
+        except: pass
+    
+    # Category & Family insights
+    insights_box3 = slide3.shapes.add_textbox(Inches(5.2), Inches(4.2), Inches(4.3), Inches(2.5))
+    insights_frame3 = insights_box3.text_frame
+    insights_frame3.text = "STRATEGIC INSIGHTS"
+    insights_frame3.paragraphs[0].font.size = Pt(12)
+    insights_frame3.paragraphs[0].font.bold = True
+    insights_frame3.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Calculate category insights
+    if 'attribute_group' in df.columns:
+        category_stats = df.groupby('attribute_group')['index'].mean().sort_values(ascending=False)
+        top_category = category_stats.index[0]
+        high_performing_categories = len(category_stats[category_stats > 120])
+        
+        family_data = df[df['attribute_group'].str.contains('child|family', case=False, na=False)]
+        family_performance = family_data['index'].mean() if not family_data.empty else 0
+        
+        strategic_insights = [
+            f"• Top Category: {top_category} (Index: {category_stats.iloc[0]:.1f})",
+            f"• {high_performing_categories} categories exceed 120 threshold",
+            f"• Family segments avg index: {family_performance:.1f}",
+            "• Focus on family-oriented messaging",
+            "• Develop lifecycle-based campaigns",
+            "• Cross-sell opportunities in top categories"
+        ]
+    else:
+        strategic_insights = ["• Category analysis not available"]
+    
+    for insight in strategic_insights:
+        para = insights_frame3.add_paragraph()
+        para.text = insight
+        para.font.size = Pt(9)
+    
+    # SLIDE 4: Strategic Recommendations & Action Plan
+    slide4 = prs.slides.add_slide(slide_layout)
+    slide4.background.fill.solid()
+    slide4.background.fill.fore_color.rgb = RGBColor(248, 249, 250)
+    
+    # Title
+    title_box4 = slide4.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.6))
+    title_frame4 = title_box4.text_frame
+    title_frame4.text = "Strategic Recommendations & Action Plan"
+    title_frame4.paragraphs[0].alignment = PP_ALIGN.CENTER
+    title_frame4.paragraphs[0].font.size = Pt(24)
+    title_frame4.paragraphs[0].font.bold = True
+    title_frame4.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    # High Priority Actions
+    high_priority_box = slide4.shapes.add_textbox(Inches(0.5), Inches(1), Inches(4.3), Inches(2.5))
+    high_priority_frame = high_priority_box.text_frame
+    high_priority_frame.text = "HIGH PRIORITY ACTIONS (1-4 weeks)"
+    high_priority_frame.paragraphs[0].font.size = Pt(14)
+    high_priority_frame.paragraphs[0].font.bold = True
+    high_priority_frame.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    high_priority_actions = [
+        f"• Prioritize top performer: {insights.get('top_attribute', 'Growing Households')}",
+        f"• Exclude {len(df[df['index'] < 80])} low-performing attributes",
+        "• Reallocate budget to income segments $15K-$75K",
+        "• Implement negative targeting for index < 80",
+        "• A/B test family-focused creative messaging"
+    ]
+    
+    for action in high_priority_actions:
+        para = high_priority_frame.add_paragraph()
+        para.text = action
+        para.font.size = Pt(10)
+    
+    # Medium Priority Actions
+    medium_priority_box = slide4.shapes.add_textbox(Inches(5.2), Inches(1), Inches(4.3), Inches(2.5))
+    medium_priority_frame = medium_priority_box.text_frame
+    medium_priority_frame.text = "MEDIUM PRIORITY ACTIONS (1-3 months)"
+    medium_priority_frame.paragraphs[0].font.size = Pt(14)
+    medium_priority_frame.paragraphs[0].font.bold = True
+    medium_priority_frame.paragraphs[0].font.color.rgb = RGBColor(255, 152, 0)
+    
+    medium_priority_actions = [
+        "• Develop lookalike audiences from top performers",
+        "• Create geographic targeting strategy",
+        "• Build family lifecycle campaigns",
+        "• Implement sequential targeting by performance",
+        "• Expand into adjacent high-performing categories"
+    ]
+    
+    for action in medium_priority_actions:
+        para = medium_priority_frame.add_paragraph()
+        para.text = action
+        para.font.size = Pt(10)
+    
+    # KPIs and Success Metrics
+    kpi_box = slide4.shapes.add_textbox(Inches(0.5), Inches(4), Inches(9), Inches(2.8))
+    kpi_frame = kpi_box.text_frame
+    kpi_frame.text = "SUCCESS METRICS & KPIs"
+    kpi_frame.paragraphs[0].font.size = Pt(14)
+    kpi_frame.paragraphs[0].font.bold = True
+    kpi_frame.paragraphs[0].font.color.rgb = RGBColor(33, 150, 243)
+    
+    # Calculate current and target metrics
+    current_avg_index = df['index'].mean()
+    current_high_performer_rate = len(df[df['index'] > 120]) / len(df) * 100
+    
+    kpi_metrics = [
+        f"• Overall Index Improvement: {current_avg_index:.1f} → {current_avg_index * 1.15:.1f} (+15% target)",
+        f"• High Performer Concentration: {current_high_performer_rate:.1f}% → {current_high_performer_rate * 1.3:.1f}% (+30% target)",
+        f"• Budget Efficiency Gain: Baseline → +25% through low performer exclusion",
+        f"• Audience Quality Score: Current {len(df[df['index'] > 100])/len(df)*100:.1f}% → Target {len(df[df['index'] > 100])/len(df)*100*1.2:.1f}%",
+        "• Geographic Performance: Focus on top indexing regions for +20% efficiency",
+        "",
+        "EXECUTIVE SUMMARY:",
+        f"• Primary Focus: {insights.get('top_attribute', 'Growing Households')} segment optimization",
+        f"• Quick Win: Remove {len(df[df['index'] < 80])} underperforming attributes",
+        "• Strategic Vision: Family lifecycle targeting with income-based optimization"
+    ]
+    
+    for metric in kpi_metrics:
+        para = kpi_frame.add_paragraph()
+        para.text = metric
+        if metric.startswith("EXECUTIVE SUMMARY:"):
+            para.font.size = Pt(11)
+            para.font.bold = True
+            para.font.color.rgb = RGBColor(220, 53, 69)
+        else:
+            para.font.size = Pt(9)
     
     # Save presentation
     temp_ppt = tempfile.NamedTemporaryFile(delete=False, suffix=".pptx")
