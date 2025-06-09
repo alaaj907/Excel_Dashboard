@@ -6,7 +6,7 @@ This Streamlit-based web app lets users upload an Excel file and instantly gener
 
 ##  Features
 
-*  Upload any Excel file with attribute-level audience data
+*  Upload any Excel file with "Index Report" sheet- the excel file must have an "Index Report" sheet.
 *  Dashboard KPIs: Total attributes, average index score, high performers
 *  Filter by attribute group
 * Top performing attributes (bar chart)
@@ -17,10 +17,38 @@ This Streamlit-based web app lets users upload an Excel file and instantly gener
 
 ##  Ideal Use Cases
 
-* Marketing segmentation analysis
-* Audience overlap or enrichment reviews
-* Index-based targeting and prioritization
-* Insights for media, sales, and product teams
+The dashboard now includes all the requested features with proper indentation:
+🎯 10 Comprehensive Analysis Sections:
+
+🏠 Overview - Executive metrics and performance distribution
+📈 Performance Analysis - Detailed performance breakdown with charts
+💰 Income Profiling - Income bracket analysis with inverse relationship
+👨‍👩‍👧‍👦 Family Lifecycle - Family and children targeting insights
+🗺️ Geographic Analysis - State-level performance mapping
+🎯 Audience Overlap - Penetration vs performance analysis
+📋 Category Performance - Category rankings and leaderboards
+⚠️ Exclusion Opportunities - Low performer identification
+🧮 Sizing Intelligence - Reach vs relevance optimization
+📑 Strategic Recommendations - Action plans and KPIs
+
+🚀 Key Features:
+
+Sidebar Navigation for easy section switching
+Performance Buckets automatically categorize attributes
+Interactive Charts with Plotly visualizations
+Professional Styling with custom CSS
+Error Handling for missing columns
+PowerPoint Export with executive insights
+Data-Driven Recommendations based on your analysis
+
+💡 Smart Analytics:
+
+Automated Performance Segmentation
+Income Inverse Relationship Analysis
+Geographic Hot Spot Identification
+Family Targeting Optimization
+Budget Reallocation Recommendations
+Strategic Action Plans with Timelines
 
 ##  How to Use
 
