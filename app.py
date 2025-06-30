@@ -14,7 +14,7 @@ import traceback
 import re
 
 # Page configuration
-st.set_page_config(page_title="Enhanced Audience Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Audience Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 # Custom CSS for better styling
 st.markdown("""
@@ -56,7 +56,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 Enhanced Audience Analytics Dashboard")
+st.title("🎯 Audience Analytics Dashboard")
 st.markdown("*Advanced multi-dimensional analysis with demographics and actionable insights*")
 
 def find_index_report_sheet(xls):
@@ -1736,7 +1736,7 @@ if uploaded_file:
             st.sidebar.code(traceback.format_exc())
 
 else:
-    st.markdown("## 👋 Welcome to Enhanced Audience Analytics")
+    st.markdown("## 👋 Welcome to Audience Analytics")
     
     col1, col2 = st.columns([2, 1])
     
@@ -1754,7 +1754,7 @@ else:
         - **Actionable Optimization**: Specific recommendations with ROI projections
         - **Key Insights & Call-Outs**: Executive summary with strategic recommendations
         
-        **🔍 Enhanced Features:**
+        **🔍 How It Works:**
         - **Automatic sheet detection**: Finds "Index Report" sheets regardless of naming
         - **Flexible column mapping**: Locates target columns anywhere in the spreadsheet
         - **Demographic pattern recognition**: Identifies age, income, gender patterns from data
