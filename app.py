@@ -14,7 +14,7 @@ import traceback
 import re
 
 # Page configuration
-st.set_page_config(page_title="Audience Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Enhanced Audience Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 # Custom CSS for better styling
 st.markdown("""
@@ -56,7 +56,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 Audience Analytics Dashboard")
+st.title("🎯 Enhanced Audience Analytics Dashboard")
 st.markdown("*Advanced multi-dimensional analysis with demographics and actionable insights*")
 
 def find_index_report_sheet(xls):
@@ -464,29 +464,75 @@ def create_comprehensive_charts(df, demographics, geographic, psychographics):
         
         # US Choropleth Map for Geographic Analysis
         if geographic.get('states'):
+            # State name to abbreviation mapping
+            state_abbrev_map = {
+                'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+                'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+                'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+                'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+                'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS', 'Missouri': 'MO',
+                'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+                'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH',
+                'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+                'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+                'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY'
+            }
+            
             # Prepare state data for choropleth
-            state_names = list(geographic['states'].keys())
-            state_values = [geographic['states'][state]['avg_index'] for state in state_names]
-            state_hover = [f"{state}<br>Avg Index: {geographic['states'][state]['avg_index']:.1f}<br>Segments: {geographic['states'][state]['count']}" 
-                          for state in state_names]
+            state_codes = []
+            state_values = []
+            state_hover = []
+            state_names_display = []
             
-            fig_map = go.Figure(data=go.Choropleth(
-                locations=state_names,
-                z=state_values,
-                locationmode='USA-states',
-                colorscale='RdYlBu_r',
-                reversescale=False,
-                text=state_hover,
-                hovertemplate='%{text}<extra></extra>',
-                colorbar_title="Average Index Score"
-            ))
+            for state_name, data in geographic['states'].items():
+                state_code = state_abbrev_map.get(state_name)
+                if state_code:  # Only include states we can map
+                    state_codes.append(state_code)
+                    state_values.append(data['avg_index'])
+                    state_names_display.append(state_name)
+                    hover_text = f"{state_name}<br>Avg Index: {data['avg_index']:.1f}<br>Segments: {data['count']}"
+                    if data.get('total_audience', 0) > 0:
+                        hover_text += f"<br>Total Audience: {data['total_audience']:,.0f}"
+                    state_hover.append(hover_text)
             
-            fig_map.update_layout(
-                title_text='Geographic Performance Heatmap - US States',
-                geo_scope='usa',
-                height=500
-            )
-            charts['us_map'] = fig_map
+            if state_codes:  # Only create map if we have valid state data
+                fig_map = go.Figure(data=go.Choropleth(
+                    locations=state_codes,  # Use state abbreviations
+                    z=state_values,
+                    locationmode='USA-states',
+                    colorscale='RdYlBu_r',
+                    reversescale=False,
+                    text=state_hover,
+                    hovertemplate='%{text}<extra></extra>',
+                    colorbar_title="Average Index Score",
+                    zmin=min(state_values) if state_values else 0,
+                    zmax=max(state_values) if state_values else 100
+                ))
+                
+                fig_map.update_layout(
+                    title_text='Geographic Performance Heatmap - US States',
+                    geo_scope='usa',
+                    height=500,
+                    geo=dict(
+                        showframe=False,
+                        showcoastlines=True,
+                        projection_type='albers usa'
+                    )
+                )
+                charts['us_map'] = fig_map
+            else:
+                # Fallback: create a simple bar chart if no states can be mapped
+                state_df = pd.DataFrame([
+                    {'State': k, 'Avg Index': v['avg_index'], 'Segments': v['count']}
+                    for k, v in geographic['states'].items()
+                ]).sort_values('Avg Index', ascending=False)
+                
+                fig_state_bar = px.bar(state_df, x='State', y='Avg Index', 
+                                     title='State Performance (Bar Chart - Map Data Not Available)',
+                                     hover_data=['Segments'])
+                fig_state_bar.update_xaxes(tickangle=-45)
+                fig_state_bar.add_hline(y=120, line_dash="dash", line_color="red")
+                charts['us_map'] = fig_state_bar
         
         # Demographics charts
         if demographics.get('age'):
@@ -842,7 +888,7 @@ def create_comprehensive_ppt(df, demographics, geographic, psychographics, chart
     return temp_ppt.name
 
 # Sidebar navigation
-st.sidebar.title("📊 Analytics Sections")
+st.sidebar.title("📊 Enhanced Analytics Sections")
 analysis_sections = [
     "🏠 Overview",
     "👥 Demographics Deep Dive", 
@@ -1961,7 +2007,7 @@ if uploaded_file:
             st.sidebar.code(traceback.format_exc())
 
 else:
-    st.markdown("## 👋 Welcome to Audience Analytics")
+    st.markdown("## 👋 Welcome to Enhanced Audience Analytics")
     
     col1, col2 = st.columns([2, 1])
     
@@ -1969,7 +2015,7 @@ else:
         st.markdown("""
         ### 🎯 **Comprehensive Audience Intelligence Dashboard**
         
-        This dashboard provides **deep demographic, geographic, and psychographic analysis** based on your Index Report data.
+        This enhanced dashboard provides **deep demographic, geographic, and psychographic analysis** based on your Index Report data.
         
         **📊 New Analysis Sections:**
         - **Demographics Deep Dive**: Age ranges, income levels, gender, family status, homeownership
@@ -1979,7 +2025,7 @@ else:
         - **Actionable Optimization**: Specific recommendations with ROI projections
         - **Key Insights & Call-Outs**: Executive summary with strategic recommendations
         
-        **🔍 How It Works:**
+        **🔍 Enhanced Features:**
         - **Automatic sheet detection**: Finds "Index Report" sheets regardless of naming
         - **Flexible column mapping**: Locates target columns anywhere in the spreadsheet
         - **Demographic pattern recognition**: Identifies age, income, gender patterns from data
