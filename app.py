@@ -653,8 +653,196 @@ def generate_key_insights(df, demographics, geographic, psychographics):
     
     return insights
 
+def create_comprehensive_ppt(df, demographics, geographic, psychographics, charts, key_insights, file_name=""):
+    """Create comprehensive PowerPoint presentation with all analysis"""
+    prs = Presentation()
+    
+    # SLIDE 1: Executive Dashboard
+    slide_layout = prs.slide_layouts[6]  # Blank layout
+    slide1 = prs.slides.add_slide(slide_layout)
+    
+    # Background
+    background = slide1.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(248, 249, 250)
+    
+    # Title
+    title_text = f"Comprehensive Audience Analytics Report"
+    if file_name:
+        title_text = f"{file_name} - Analytics Report"
+    
+    title_box = slide1.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.8))
+    title_frame = title_box.text_frame
+    title_frame.text = title_text
+    title_para = title_frame.paragraphs[0]
+    title_para.alignment = PP_ALIGN.CENTER
+    title_para.font.size = Pt(32)
+    title_para.font.bold = True
+    title_para.font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Key metrics
+    metrics = [
+        ("Total Segments", f"{len(df):,}"),
+        ("Avg Index Score", f"{df['Index'].mean():.1f}"),
+        ("High Performers", f"{len(df[df['Index'] > 120]):,}"),
+        ("Performance Rate", f"{len(df[df['Index'] > 120])/len(df)*100:.1f}%")
+    ]
+    
+    for i, (label, value) in enumerate(metrics):
+        x_pos = 0.5 + (i * 2.25)
+        box = slide1.shapes.add_textbox(Inches(x_pos), Inches(1.0), Inches(2), Inches(1))
+        box_frame = box.text_frame
+        box_frame.text = label
+        box_frame.paragraphs[0].font.size = Pt(12)
+        box_frame.paragraphs[0].font.bold = True
+        
+        value_para = box_frame.add_paragraph()
+        value_para.text = value
+        value_para.font.size = Pt(18)
+        value_para.font.bold = True
+        value_para.font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Key insights
+    insights_box = slide1.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(9), Inches(4))
+    insights_frame = insights_box.text_frame
+    insights_frame.text = "KEY STRATEGIC INSIGHTS"
+    insights_frame.paragraphs[0].font.size = Pt(16)
+    insights_frame.paragraphs[0].font.bold = True
+    insights_frame.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    for insight in key_insights[:6]:  # Limit to 6 insights for space
+        para = insights_frame.add_paragraph()
+        para.text = f"• {insight}"
+        para.font.size = Pt(11)
+        para.font.color.rgb = RGBColor(50, 50, 50)
+    
+    # SLIDE 2: Demographics Summary
+    if demographics:
+        slide2 = prs.slides.add_slide(slide_layout)
+        slide2.background.fill.solid()
+        slide2.background.fill.fore_color.rgb = RGBColor(248, 249, 250)
+        
+        title_box2 = slide2.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.6))
+        title_frame2 = title_box2.text_frame
+        title_frame2.text = "Demographics Analysis"
+        title_frame2.paragraphs[0].alignment = PP_ALIGN.CENTER
+        title_frame2.paragraphs[0].font.size = Pt(28)
+        title_frame2.paragraphs[0].font.bold = True
+        title_frame2.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+        
+        # Demographics content
+        demo_box = slide2.shapes.add_textbox(Inches(0.5), Inches(1), Inches(9), Inches(6))
+        demo_frame = demo_box.text_frame
+        demo_frame.text = "DEMOGRAPHIC INSIGHTS"
+        demo_frame.paragraphs[0].font.size = Pt(14)
+        demo_frame.paragraphs[0].font.bold = True
+        
+        # Add demographic findings
+        if demographics.get('age'):
+            best_age = max(demographics['age'].items(), key=lambda x: x[1]['avg_index'])
+            para = demo_frame.add_paragraph()
+            para.text = f"• Age Performance Leader: {best_age[0]} (Index: {best_age[1]['avg_index']:.1f})"
+            para.font.size = Pt(12)
+        
+        if demographics.get('income'):
+            best_income = max(demographics['income'].items(), key=lambda x: x[1]['avg_index'])
+            para = demo_frame.add_paragraph()
+            para.text = f"• Income Sweet Spot: {best_income[0]} (Index: {best_income[1]['avg_index']:.1f})"
+            para.font.size = Pt(12)
+        
+        if demographics.get('gender'):
+            for gender, data in demographics['gender'].items():
+                para = demo_frame.add_paragraph()
+                para.text = f"• {gender} Performance: {data['avg_index']:.1f} index ({data['count']} segments)"
+                para.font.size = Pt(12)
+    
+    # SLIDE 3: Geographic Analysis
+    if geographic:
+        slide3 = prs.slides.add_slide(slide_layout)
+        slide3.background.fill.solid()
+        slide3.background.fill.fore_color.rgb = RGBColor(248, 249, 250)
+        
+        title_box3 = slide3.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.6))
+        title_frame3 = title_box3.text_frame
+        title_frame3.text = "Geographic Performance Analysis"
+        title_frame3.paragraphs[0].alignment = PP_ALIGN.CENTER
+        title_frame3.paragraphs[0].font.size = Pt(28)
+        title_frame3.paragraphs[0].font.bold = True
+        title_frame3.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+        
+        # Geographic content
+        geo_box = slide3.shapes.add_textbox(Inches(0.5), Inches(1), Inches(9), Inches(6))
+        geo_frame = geo_box.text_frame
+        geo_frame.text = "GEOGRAPHIC INSIGHTS"
+        geo_frame.paragraphs[0].font.size = Pt(14)
+        geo_frame.paragraphs[0].font.bold = True
+        
+        if geographic.get('states'):
+            top_states = sorted(geographic['states'].items(), key=lambda x: x[1]['avg_index'], reverse=True)[:5]
+            para = geo_frame.add_paragraph()
+            para.text = "TOP PERFORMING STATES:"
+            para.font.size = Pt(12)
+            para.font.bold = True
+            
+            for i, (state, data) in enumerate(top_states, 1):
+                para = geo_frame.add_paragraph()
+                para.text = f"{i}. {state}: {data['avg_index']:.1f} index ({data['count']} segments)"
+                para.font.size = Pt(11)
+        
+        if geographic.get('regions'):
+            best_region = max(geographic['regions'].items(), key=lambda x: x[1]['avg_index'])
+            para = geo_frame.add_paragraph()
+            para.text = f"• Top Region: {best_region[0]} ({best_region[1]['avg_index']:.1f} index)"
+            para.font.size = Pt(12)
+    
+    # SLIDE 4: Performance Analysis
+    slide4 = prs.slides.add_slide(slide_layout)
+    slide4.background.fill.solid()
+    slide4.background.fill.fore_color.rgb = RGBColor(248, 249, 250)
+    
+    title_box4 = slide4.shapes.add_textbox(Inches(0.5), Inches(0.1), Inches(9), Inches(0.6))
+    title_frame4 = title_box4.text_frame
+    title_frame4.text = "Performance Analysis Summary"
+    title_frame4.paragraphs[0].alignment = PP_ALIGN.CENTER
+    title_frame4.paragraphs[0].font.size = Pt(28)
+    title_frame4.paragraphs[0].font.bold = True
+    title_frame4.paragraphs[0].font.color.rgb = RGBColor(220, 53, 69)
+    
+    # Performance analysis content
+    perf_box = slide4.shapes.add_textbox(Inches(0.5), Inches(1), Inches(9), Inches(6))
+    perf_frame = perf_box.text_frame
+    perf_frame.text = "PERFORMANCE SUMMARY"
+    perf_frame.paragraphs[0].font.size = Pt(14)
+    perf_frame.paragraphs[0].font.bold = True
+    
+    # Add performance statistics
+    mean_val = df['Index'].mean()
+    median_val = df['Index'].median()
+    std_val = df['Index'].std()
+    high_performers = len(df[df['Index'] > 120])
+    
+    performance_insights = [
+        f"Average Index Performance: {mean_val:.1f}",
+        f"Median Performance: {median_val:.1f}",
+        f"Performance Standard Deviation: {std_val:.1f}",
+        f"High Performers (>120): {high_performers:,} segments ({high_performers/len(df)*100:.1f}%)",
+        f"Performance Range: {df['Index'].min():.1f} - {df['Index'].max():.1f}",
+        f"Total Segments Analyzed: {len(df):,}"
+    ]
+    
+    for insight in performance_insights:
+        para = perf_frame.add_paragraph()
+        para.text = f"• {insight}"
+        para.font.size = Pt(12)
+    
+    # Save to temporary file
+    temp_ppt = tempfile.NamedTemporaryFile(delete=False, suffix=".pptx")
+    prs.save(temp_ppt.name)
+    return temp_ppt.name
+
 # Sidebar navigation
-st.sidebar.title("📊 Enhanced Analytics Sections")
+st.sidebar.title("📊 Analytics Sections")
 analysis_sections = [
     "🏠 Overview",
     "👥 Demographics Deep Dive", 
@@ -1711,8 +1899,45 @@ if uploaded_file:
                 st.sidebar.subheader("📥 Export Analysis")
                 
                 if st.sidebar.button("📊 Generate Comprehensive Report", type="primary"):
-                    st.success("🎯 Comprehensive analysis complete!")
-                    st.info("Enhanced dashboard with demographics, geographic, and psychographic insights ready for strategic decision-making.")
+                    with st.spinner("Creating comprehensive PowerPoint presentation..."):
+                        try:
+                            # Generate the PowerPoint presentation
+                            ppt_path = create_comprehensive_ppt(df, demographics, geographic, psychographics, charts, key_insights, file_name)
+                            
+                            st.success("✅ Comprehensive presentation generated successfully!")
+                            st.info(f"📊 Created presentation with analysis across all sections")
+                            
+                            # Create download filename
+                            download_filename = f"{file_name.replace(' ', '_')}_Comprehensive_Report.pptx" if file_name else "Audience_Analytics_Report.pptx"
+                            
+                            # Provide download button
+                            with open(ppt_path, "rb") as file:
+                                st.sidebar.download_button(
+                                    label="📥 Download PowerPoint Report",
+                                    data=file,
+                                    file_name=download_filename,
+                                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                    key="download_comprehensive_ppt"
+                                )
+                            
+                            st.sidebar.markdown("**📋 Report Includes:**")
+                            st.sidebar.markdown("• ✅ Executive dashboard with key metrics")
+                            st.sidebar.markdown("• ✅ Demographics analysis summary")
+                            st.sidebar.markdown("• ✅ Geographic performance insights")
+                            st.sidebar.markdown("• ✅ Performance analysis statistics")
+                            st.sidebar.markdown("• ✅ Strategic recommendations")
+                            st.sidebar.markdown(f"• ✅ Analysis of {len(df):,} segments")
+                            
+                            # Cleanup
+                            try:
+                                os.unlink(ppt_path)
+                            except Exception as cleanup_error:
+                                pass
+                                
+                        except Exception as e:
+                            st.error(f"❌ Error generating presentation: {str(e)}")
+                            if st.sidebar.checkbox("Show detailed error", key="show_error_ppt"):
+                                st.sidebar.code(traceback.format_exc())
             
             else:
                 st.error("❌ Could not find sufficient target columns in the data")
@@ -1744,7 +1969,7 @@ else:
         st.markdown("""
         ### 🎯 **Comprehensive Audience Intelligence Dashboard**
         
-        This enhanced dashboard provides **deep demographic, geographic, and psychographic analysis** based on your Index Report data.
+        This dashboard provides **deep demographic, geographic, and psychographic analysis** based on your Index Report data.
         
         **📊 New Analysis Sections:**
         - **Demographics Deep Dive**: Age ranges, income levels, gender, family status, homeownership
