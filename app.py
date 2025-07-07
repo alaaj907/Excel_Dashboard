@@ -14,7 +14,7 @@ import traceback
 import re
 
 # Page configuration
-st.set_page_config(page_title="Audience Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title=" Audience Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 # Custom CSS for better styling
 st.markdown("""
@@ -56,7 +56,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎯 Audience Analytics Dashboard")
+st.title("🎯  Audience Analytics Dashboard")
 st.markdown("*Advanced multi-dimensional analysis with demographics and actionable insights*")
 
 def find_index_report_sheet(xls):
@@ -236,52 +236,6 @@ def analyze_demographics(df):
         
         demographics['gender'] = gender_data
         
-        # NEW: Ethnicity analysis
-        ethnicity_patterns = {
-            'Hispanic/Latino': ['hispanic', 'latino', 'latina', 'latinx', 'spanish speaking'],
-            'African American/Black': ['african american', 'black', 'afro american'],
-            'Asian American': ['asian', 'asian american', 'chinese', 'korean', 'japanese', 'vietnamese', 'indian', 'filipino'],
-            'White/Caucasian': ['white', 'caucasian', 'european american'],
-            'Native American': ['native american', 'american indian', 'indigenous'],
-            'Mixed/Multiracial': ['mixed race', 'multiracial', 'biracial'],
-            'Middle Eastern': ['middle eastern', 'arab', 'persian']
-        }
-        
-        ethnicity_data = {}
-        for ethnicity, patterns in ethnicity_patterns.items():
-            mask = attr_text.str.contains('|'.join(patterns), na=False)
-            segments = df[mask]
-            if len(segments) > 0:
-                ethnicity_data[ethnicity] = {
-                    'count': len(segments),
-                    'avg_index': segments['Index'].mean(),
-                    'segments': segments
-                }
-        
-        demographics['ethnicity'] = ethnicity_data
-        
-        # NEW: Education level analysis
-        education_patterns = {
-            'High School or Less': ['high school', 'hs grad', 'no college', 'less than college', 'secondary education'],
-            'Some College': ['some college', 'associates', 'community college', '2 year degree', 'vocational'],
-            'College Graduate': ['college grad', 'bachelor', 'undergraduate', 'university grad', '4 year degree'],
-            'Graduate Degree': ['graduate', 'masters', 'mba', 'phd', 'doctorate', 'post grad', 'advanced degree'],
-            'Professional Degree': ['professional degree', 'law degree', 'medical degree', 'jd', 'md']
-        }
-        
-        education_data = {}
-        for education_level, patterns in education_patterns.items():
-            mask = attr_text.str.contains('|'.join(patterns), na=False)
-            segments = df[mask]
-            if len(segments) > 0:
-                education_data[education_level] = {
-                    'count': len(segments),
-                    'avg_index': segments['Index'].mean(),
-                    'segments': segments
-                }
-        
-        demographics['education'] = education_data
-        
         # Income analysis
         income_patterns = {
             'High Income ($100K+)': ['high income', '100k', '$100', 'affluent', 'luxury'],
@@ -346,13 +300,13 @@ def analyze_demographics(df):
     return demographics
 
 def analyze_geographic_patterns(df):
-    """Analyze geographic patterns from attribute names with state detection"""
+    """Analyze geographic patterns from attribute names with  state detection"""
     geographic = {}
     
     if 'Attribute Name' in df.columns:
         attr_text = df['Attribute Name'].str.lower()
         
-        # Enhanced state patterns with abbreviations and full names
+        #  state patterns with abbreviations and full names
         states_data = {
             'Alabama': ['alabama', 'al'], 'Alaska': ['alaska', 'ak'], 'Arizona': ['arizona', 'az'],
             'Arkansas': ['arkansas', 'ar'], 'California': ['california', 'ca'], 'Colorado': ['colorado', 'co'],
@@ -390,7 +344,7 @@ def analyze_geographic_patterns(df):
         
         geographic['states'] = state_data
         
-        # Regional patterns (enhanced)
+        # Regional patterns ()
         regions = {
             'Northeast': ['northeast', 'new england', 'new york', 'boston', 'philadelphia', 'new jersey', 
                          'massachusetts', 'connecticut', 'maine', 'vermont', 'new hampshire', 'rhode island'],
@@ -591,37 +545,6 @@ def create_comprehensive_charts(df, demographics, geographic, psychographics):
             fig_age.add_hline(y=120, line_dash="dash", line_color="red")
             charts['age_performance'] = fig_age
         
-        # NEW: Ethnicity charts
-        if demographics.get('ethnicity'):
-            ethnicity_df = pd.DataFrame([
-                {'Ethnicity': k, 'Count': v['count'], 'Avg Index': v['avg_index']}
-                for k, v in demographics['ethnicity'].items()
-            ])
-            fig_ethnicity = px.bar(ethnicity_df, x='Ethnicity', y='Avg Index', color='Count',
-                                 title='Performance by Ethnicity',
-                                 color_continuous_scale='RdYlBu_r')
-            fig_ethnicity.add_hline(y=120, line_dash="dash", line_color="red")
-            fig_ethnicity.update_xaxes(tickangle=-45)
-            charts['ethnicity_performance'] = fig_ethnicity
-        
-        # NEW: Education charts
-        if demographics.get('education'):
-            education_df = pd.DataFrame([
-                {'Education Level': k, 'Count': v['count'], 'Avg Index': v['avg_index']}
-                for k, v in demographics['education'].items()
-            ])
-            # Order education levels logically
-            education_order = ['High School or Less', 'Some College', 'College Graduate', 'Graduate Degree', 'Professional Degree']
-            education_df['Education Level'] = pd.Categorical(education_df['Education Level'], categories=education_order, ordered=True)
-            education_df = education_df.sort_values('Education Level')
-            
-            fig_education = px.bar(education_df, x='Education Level', y='Avg Index', color='Count',
-                                 title='Performance by Education Level',
-                                 color_continuous_scale='viridis')
-            fig_education.add_hline(y=120, line_dash="dash", line_color="red")
-            fig_education.update_xaxes(tickangle=-45)
-            charts['education_performance'] = fig_education
-        
         if demographics.get('income'):
             income_df = pd.DataFrame([
                 {'Income Group': k, 'Count': v['count'], 'Avg Index': v['avg_index']}
@@ -760,14 +683,6 @@ def generate_key_insights(df, demographics, geographic, psychographics):
         best_age = max(demographics['age'].items(), key=lambda x: x[1]['avg_index'])
         insights.append(f"**Age Sweet Spot**: {best_age[0]} performs best with {best_age[1]['avg_index']:.1f} average index")
     
-    if demographics.get('ethnicity'):
-        best_ethnicity = max(demographics['ethnicity'].items(), key=lambda x: x[1]['avg_index'])
-        insights.append(f"**Ethnicity Leader**: {best_ethnicity[0]} shows highest performance at {best_ethnicity[1]['avg_index']:.1f} index")
-    
-    if demographics.get('education'):
-        best_education = max(demographics['education'].items(), key=lambda x: x[1]['avg_index'])
-        insights.append(f"**Education Focus**: {best_education[0]} demonstrates {best_education[1]['avg_index']:.1f} index performance")
-    
     if demographics.get('income'):
         best_income = max(demographics['income'].items(), key=lambda x: x[1]['avg_index'])
         insights.append(f"**Income Focus**: {best_income[0]} shows strongest performance at {best_income[1]['avg_index']:.1f} index")
@@ -874,18 +789,6 @@ def create_comprehensive_ppt(df, demographics, geographic, psychographics, chart
             best_age = max(demographics['age'].items(), key=lambda x: x[1]['avg_index'])
             para = demo_frame.add_paragraph()
             para.text = f"• Age Performance Leader: {best_age[0]} (Index: {best_age[1]['avg_index']:.1f})"
-            para.font.size = Pt(12)
-        
-        if demographics.get('ethnicity'):
-            best_ethnicity = max(demographics['ethnicity'].items(), key=lambda x: x[1]['avg_index'])
-            para = demo_frame.add_paragraph()
-            para.text = f"• Ethnicity Leader: {best_ethnicity[0]} (Index: {best_ethnicity[1]['avg_index']:.1f})"
-            para.font.size = Pt(12)
-        
-        if demographics.get('education'):
-            best_education = max(demographics['education'].items(), key=lambda x: x[1]['avg_index'])
-            para = demo_frame.add_paragraph()
-            para.text = f"• Education Focus: {best_education[0]} (Index: {best_education[1]['avg_index']:.1f})"
             para.font.size = Pt(12)
         
         if demographics.get('income'):
@@ -1044,7 +947,7 @@ if uploaded_file:
                 
                 st.success(f"✅ Ready for analysis with {len(df)} valid records!")
                 
-                # Perform enhanced analysis
+                # Perform  analysis
                 demographics = analyze_demographics(df)
                 geographic = analyze_geographic_patterns(df)
                 psychographics = analyze_psychographics(df)
@@ -1125,112 +1028,6 @@ if uploaded_file:
                             age_df = pd.DataFrame(age_data)
                             st.dataframe(age_df, use_container_width=True)
                     
-                    # Gender Analysis
-                    if demographics.get('gender'):
-                        st.subheader("⚧ Gender Breakdown")
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            gender_labels = list(demographics['gender'].keys())
-                            gender_values = [data['count'] for data in demographics['gender'].values()]
-                            
-                            fig_gender = px.pie(
-                                values=gender_values,
-                                names=gender_labels,
-                                title="Gender Distribution"
-                            )
-                            st.plotly_chart(fig_gender, use_container_width=True)
-                        
-                        with col2:
-                            st.markdown("**Gender Performance:**")
-                            for gender, data in demographics['gender'].items():
-                                st.metric(f"{gender} Avg Index", f"{data['avg_index']:.1f}")
-                    
-                    # NEW: Ethnicity Analysis
-                    if demographics.get('ethnicity'):
-                        st.subheader("🌍 Ethnicity & Cultural Background")
-                        col1, col2 = st.columns([2, 1])
-                        
-                        with col1:
-                            ethnicity_data = []
-                            for ethnicity, data in demographics['ethnicity'].items():
-                                ethnicity_data.append({
-                                    'Ethnicity': ethnicity,
-                                    'Segments': data['count'],
-                                    'Avg Index': data['avg_index']
-                                })
-                            
-                            ethnicity_df = pd.DataFrame(ethnicity_data)
-                            
-                            fig_ethnicity = px.bar(
-                                ethnicity_df, 
-                                x='Ethnicity', 
-                                y='Avg Index',
-                                color='Avg Index',
-                                size='Segments',
-                                title="Performance by Ethnicity",
-                                color_continuous_scale='RdYlBu_r'
-                            )
-                            fig_ethnicity.add_hline(y=120, line_dash="dash", line_color="red")
-                            fig_ethnicity.update_xaxes(tickangle=-45)
-                            st.plotly_chart(fig_ethnicity, use_container_width=True)
-                        
-                        with col2:
-                            st.markdown("**Ethnicity Performance Details:**")
-                            ethnicity_display = ethnicity_df.copy()
-                            ethnicity_display['Avg Index'] = ethnicity_display['Avg Index'].round(1)
-                            ethnicity_display = ethnicity_display.sort_values('Avg Index', ascending=False)
-                            st.dataframe(ethnicity_display, use_container_width=True)
-                            
-                            # Key insights
-                            best_ethnicity = ethnicity_display.iloc[0]
-                            st.info(f"🏆 **Top Performer**: {best_ethnicity['Ethnicity']} ({best_ethnicity['Avg Index']} index)")
-                    
-                    # NEW: Education Level Analysis
-                    if demographics.get('education'):
-                        st.subheader("🎓 Education Level Performance")
-                        col1, col2 = st.columns([2, 1])
-                        
-                        with col1:
-                            education_data = []
-                            for education_level, data in demographics['education'].items():
-                                education_data.append({
-                                    'Education Level': education_level,
-                                    'Segments': data['count'],
-                                    'Avg Index': data['avg_index']
-                                })
-                            
-                            education_df = pd.DataFrame(education_data)
-                            
-                            # Order education levels logically
-                            education_order = ['High School or Less', 'Some College', 'College Graduate', 'Graduate Degree', 'Professional Degree']
-                            education_df['Education Level'] = pd.Categorical(education_df['Education Level'], categories=education_order, ordered=True)
-                            education_df = education_df.sort_values('Education Level')
-                            
-                            fig_education = px.bar(
-                                education_df,
-                                x='Education Level',
-                                y='Avg Index',
-                                color='Segments',
-                                title="Performance by Education Level",
-                                color_continuous_scale='viridis'
-                            )
-                            fig_education.add_hline(y=120, line_dash="dash", line_color="red")
-                            fig_education.update_xaxes(tickangle=-45)
-                            st.plotly_chart(fig_education, use_container_width=True)
-                        
-                        with col2:
-                            st.markdown("**Education Performance Insights:**")
-                            education_display = education_df.copy()
-                            education_display['Avg Index'] = education_display['Avg Index'].round(1)
-                            education_display = education_display.sort_values('Avg Index', ascending=False)
-                            st.dataframe(education_display, use_container_width=True)
-                            
-                            # Education correlation analysis
-                            if len(education_display) > 1:
-                                correlation_insight = "Strong positive correlation with education" if education_display.iloc[0]['Education Level'] in ['Graduate Degree', 'Professional Degree'] else "Mixed correlation with education level"
-                                st.info(f"📊 **Pattern**: {correlation_insight}")
-                    
                     # Income Analysis
                     if demographics.get('income'):
                         st.subheader("💰 Income Level Performance")
@@ -1252,59 +1049,26 @@ if uploaded_file:
                             income_df = pd.DataFrame(income_data)
                             st.dataframe(income_df, use_container_width=True)
                     
-                    # Cross-Demographic Analysis
-                    st.subheader("🔄 Cross-Demographic Insights")
-                    
-                    # Create summary table of all demographic categories
-                    demo_summary = []
-                    
-                    # Add all demographic categories to summary
-                    for category_name, category_data in demographics.items():
-                        if category_data:  # Only include if data exists
-                            best_segment = max(category_data.items(), key=lambda x: x[1]['avg_index'])
-                            demo_summary.append({
-                                'Demographic Category': category_name.title(),
-                                'Top Performing Segment': best_segment[0],
-                                'Top Index Score': f"{best_segment[1]['avg_index']:.1f}",
-                                'Total Segments': sum([data['count'] for data in category_data.values()])
-                            })
-                    
-                    if demo_summary:
-                        summary_df = pd.DataFrame(demo_summary)
-                        summary_df = summary_df.sort_values('Top Index Score', ascending=False)
-                        
-                        col1, col2 = st.columns([2, 1])
+                    # Gender Analysis
+                    if demographics.get('gender'):
+                        st.subheader("⚧ Gender Breakdown")
+                        col1, col2 = st.columns(2)
                         
                         with col1:
-                            st.markdown("**Cross-Demographic Performance Summary:**")
-                            st.dataframe(summary_df, use_container_width=True)
+                            gender_labels = list(demographics['gender'].keys())
+                            gender_values = [data['count'] for data in demographics['gender'].values()]
+                            
+                            fig_gender = px.pie(
+                                values=gender_values,
+                                names=gender_labels,
+                                title="Gender Distribution"
+                            )
+                            st.plotly_chart(fig_gender, use_container_width=True)
                         
                         with col2:
-                            # Create a radar chart for top performing segments across categories
-                            if len(demo_summary) >= 3:
-                                categories = [item['Demographic Category'] for item in demo_summary]
-                                scores = [float(item['Top Index Score']) for item in demo_summary]
-                                
-                                fig_radar = go.Figure()
-                                fig_radar.add_trace(go.Scatterpolar(
-                                    r=scores,
-                                    theta=categories,
-                                    fill='toself',
-                                    name='Top Performance by Category'
-                                ))
-                                
-                                fig_radar.update_layout(
-                                    polar=dict(
-                                        radialaxis=dict(
-                                            visible=True,
-                                            range=[0, max(scores) * 1.1]
-                                        )),
-                                    showlegend=False,
-                                    title="Demographic Performance Radar",
-                                    height=400
-                                )
-                                
-                                st.plotly_chart(fig_radar, use_container_width=True)
+                            st.markdown("**Gender Performance:**")
+                            for gender, data in demographics['gender'].items():
+                                st.metric(f"{gender} Avg Index", f"{data['avg_index']:.1f}")
                     
                     # Family Status
                     if demographics.get('family'):
@@ -1343,42 +1107,12 @@ if uploaded_file:
                             for status, data in demographics['homeownership'].items():
                                 st.metric(f"{status} Index", f"{data['avg_index']:.1f}")
                     
-                    # Enhanced Demographics insights
+                    # Demographics insights
                     st.markdown('<div class="demographics-box">', unsafe_allow_html=True)
                     st.markdown("**👥 Demographics Key Findings:**")
-                    
-                    # Generate insights for all demographic categories
-                    all_demo_insights = []
-                    
-                    if demographics.get('age'):
-                        best_age = max(demographics['age'].items(), key=lambda x: x[1]['avg_index'])
-                        all_demo_insights.append(f"**Age Sweet Spot**: {best_age[0]} performs best with {best_age[1]['avg_index']:.1f} average index")
-                    
-                    if demographics.get('ethnicity'):
-                        best_ethnicity = max(demographics['ethnicity'].items(), key=lambda x: x[1]['avg_index'])
-                        all_demo_insights.append(f"**Ethnicity Leader**: {best_ethnicity[0]} shows highest performance at {best_ethnicity[1]['avg_index']:.1f} index")
-                    
-                    if demographics.get('education'):
-                        best_education = max(demographics['education'].items(), key=lambda x: x[1]['avg_index'])
-                        all_demo_insights.append(f"**Education Focus**: {best_education[0]} demonstrates {best_education[1]['avg_index']:.1f} index performance")
-                    
-                    if demographics.get('income'):
-                        best_income = max(demographics['income'].items(), key=lambda x: x[1]['avg_index'])
-                        all_demo_insights.append(f"**Income Sweet Spot**: {best_income[0]} shows strongest performance at {best_income[1]['avg_index']:.1f} index")
-                    
-                    if demographics.get('gender'):
-                        for gender, data in demographics['gender'].items():
-                            all_demo_insights.append(f"**{gender} Performance**: {data['avg_index']:.1f} index ({data['count']} segments)")
-                    
-                    # Display insights
-                    for insight in all_demo_insights:
+                    demo_insights = [insight for insight in key_insights if any(keyword in insight.lower() for keyword in ['age', 'income', 'gender', 'family'])]
+                    for insight in demo_insights:
                         st.markdown(f"• {insight}")
-                    
-                    # Summary recommendation
-                    if demo_summary:
-                        top_demo_category = demo_summary[0]
-                        st.markdown(f"• **Strategic Priority**: Focus on {top_demo_category['Demographic Category']} segmentation with {top_demo_category['Top Performing Segment']} showing {top_demo_category['Top Index Score']} performance")
-                    
                     st.markdown('</div>', unsafe_allow_html=True)
                 
                 elif selected_section == "🗺️ Geographic Intelligence":
@@ -1684,11 +1418,11 @@ if uploaded_file:
                     col1, col2 = st.columns([2, 1])
                     
                     with col1:
-                        # Enhanced histogram with multiple statistical overlays
-                        fig_enhanced_hist = go.Figure()
+                        #  histogram with multiple statistical overlays
+                        fig__hist = go.Figure()
                         
                         # Histogram
-                        fig_enhanced_hist.add_trace(go.Histogram(
+                        fig__hist.add_trace(go.Histogram(
                             x=df['Index'],
                             nbinsx=30,
                             name='Index Distribution',
@@ -1702,25 +1436,25 @@ if uploaded_file:
                         q1 = df['Index'].quantile(0.25)
                         q3 = df['Index'].quantile(0.75)
                         
-                        fig_enhanced_hist.add_vline(x=mean_val, line_dash="solid", line_color="red", 
+                        fig__hist.add_vline(x=mean_val, line_dash="solid", line_color="red", 
                                                   annotation_text=f"Mean: {mean_val:.1f}")
-                        fig_enhanced_hist.add_vline(x=median_val, line_dash="dot", line_color="green",
+                        fig__hist.add_vline(x=median_val, line_dash="dot", line_color="green",
                                                   annotation_text=f"Median: {median_val:.1f}")
-                        fig_enhanced_hist.add_vline(x=q1, line_dash="dash", line_color="orange",
+                        fig__hist.add_vline(x=q1, line_dash="dash", line_color="orange",
                                                   annotation_text=f"Q1: {q1:.1f}")
-                        fig_enhanced_hist.add_vline(x=q3, line_dash="dash", line_color="orange",
+                        fig__hist.add_vline(x=q3, line_dash="dash", line_color="orange",
                                                   annotation_text=f"Q3: {q3:.1f}")
-                        fig_enhanced_hist.add_vline(x=120, line_dash="solid", line_color="purple",
+                        fig__hist.add_vline(x=120, line_dash="solid", line_color="purple",
                                                   annotation_text="Threshold: 120")
                         
-                        fig_enhanced_hist.update_layout(
-                            title='Enhanced Index Distribution with Statistical Markers',
+                        fig__hist.update_layout(
+                            title=' Index Distribution with Statistical Markers',
                             xaxis_title='Index Score',
                             yaxis_title='Frequency',
                             height=400
                         )
                         
-                        st.plotly_chart(fig_enhanced_hist, use_container_width=True)
+                        st.plotly_chart(fig__hist, use_container_width=True)
                     
                     with col2:
                         st.markdown("**🔍 Statistical Interpretation:**")
@@ -1813,7 +1547,7 @@ if uploaded_file:
                             else:
                                 st.info("📊 **Balanced performance**: Broad optimization needed")
                     
-                    # Performance Quartile Analysis with Enhanced Details
+                    # Performance Quartile Analysis with  Details
                     st.subheader("🎯 Detailed Quartile Performance Analysis")
                     
                     quartiles = df['Index'].quantile([0.25, 0.5, 0.75])
@@ -1821,7 +1555,7 @@ if uploaded_file:
                     col1, col2 = st.columns([2, 1])
                     
                     with col1:
-                        # Enhanced quartile visualization
+                        #  quartile visualization
                         fig_quartile_detail = go.Figure()
                         
                         # Add histogram
@@ -1889,7 +1623,7 @@ if uploaded_file:
                         quartile_df = pd.DataFrame(quartile_analysis)
                         st.dataframe(quartile_df, use_container_width=True)
                     
-                    # Top and Bottom Performers with Enhanced Analysis
+                    # Top and Bottom Performers with  Analysis
                     st.subheader("🏆 Performance Leaders & Improvement Opportunities")
                     
                     col1, col2 = st.columns(2)
@@ -2080,14 +1814,6 @@ if uploaded_file:
                         best_age = max(demographics['age'].items(), key=lambda x: x[1]['avg_index'])
                         characteristics.append(f"**Primary Age Group**: {best_age[0]} (Index: {best_age[1]['avg_index']:.1f})")
                     
-                    if demographics.get('ethnicity'):
-                        best_ethnicity = max(demographics['ethnicity'].items(), key=lambda x: x[1]['avg_index'])
-                        characteristics.append(f"**Top Ethnicity**: {best_ethnicity[0]} (Index: {best_ethnicity[1]['avg_index']:.1f})")
-                    
-                    if demographics.get('education'):
-                        best_education = max(demographics['education'].items(), key=lambda x: x[1]['avg_index'])
-                        characteristics.append(f"**Education Focus**: {best_education[0]} (Index: {best_education[1]['avg_index']:.1f})")
-                    
                     if demographics.get('income'):
                         best_income = max(demographics['income'].items(), key=lambda x: x[1]['avg_index'])
                         characteristics.append(f"**Income Sweet Spot**: {best_income[0]} (Index: {best_income[1]['avg_index']:.1f})")
@@ -2205,14 +1931,6 @@ if uploaded_file:
                         best_age = max(demographics['age'].items(), key=lambda x: x[1]['avg_index'])
                         recommendations.append(f"**Demographic Focus**: Prioritize {best_age[0]} segments for highest ROI")
                     
-                    if demographics.get('ethnicity'):
-                        best_ethnicity = max(demographics['ethnicity'].items(), key=lambda x: x[1]['avg_index'])
-                        recommendations.append(f"**Cultural Targeting**: Focus on {best_ethnicity[0]} segments with proven performance")
-                    
-                    if demographics.get('education'):
-                        best_education = max(demographics['education'].items(), key=lambda x: x[1]['avg_index'])
-                        recommendations.append(f"**Education-Based Strategy**: Target {best_education[0]} for optimal results")
-                    
                     if geographic.get('regions'):
                         best_region = max(geographic['regions'].items(), key=lambda x: x[1]['avg_index'])
                         recommendations.append(f"**Geographic Priority**: Expand presence in {best_region[0]} market")
@@ -2289,7 +2007,7 @@ if uploaded_file:
             st.sidebar.code(traceback.format_exc())
 
 else:
-    st.markdown("## 👋 Welcome to Audience Analytics")
+    st.markdown("## 👋 Welcome to  Audience Analytics")
     
     col1, col2 = st.columns([2, 1])
     
@@ -2297,20 +2015,20 @@ else:
         st.markdown("""
         ### 🎯 **Comprehensive Audience Intelligence Dashboard**
         
-        This dashboard provides **deep demographic, geographic, and psychographic analysis** based on your Index Report data.
+        This  dashboard provides **deep demographic, geographic, and psychographic analysis** based on your Index Report data.
         
-        **📊 Analysis Sections:**
-        - **Demographics Deep Dive**: Age ranges, income levels, gender, **ethnicity, education**, family status, homeownership
+        **📊 New Analysis Sections:**
+        - **Demographics Deep Dive**: Age ranges, income levels, gender, family status, homeownership
         - **Geographic Intelligence**: Regional performance, urban/suburban/rural analysis
         - **Psychographics & Behaviors**: Lifestyle interests, financial behaviors, media consumption
         - **Advanced Performance Analysis**: Quartile analysis, top/bottom performers
         - **Actionable Optimization**: Specific recommendations with ROI projections
         - **Key Insights & Call-Outs**: Executive summary with strategic recommendations
         
-        **🔍 Enhanced Features:**
+        **🔍  Features:**
         - **Automatic sheet detection**: Finds "Index Report" sheets regardless of naming
         - **Flexible column mapping**: Locates target columns anywhere in the spreadsheet
-        - **Demographic pattern recognition**: Identifies age, income, gender, **ethnicity, education** patterns from data
+        - **Demographic pattern recognition**: Identifies age, income, gender patterns from data
         - **Geographic analysis**: Regional and area type performance insights
         - **Behavioral segmentation**: Lifestyle and psychographic pattern detection
         - **Actionable recommendations**: Specific optimization steps with timelines
@@ -2331,7 +2049,7 @@ else:
         st.markdown("• Base Adjusted Population columns")
         st.markdown("")
         st.markdown("**🎯 Key Benefits:**")
-        st.markdown("• **7 demographic dimensions** including ethnicity & education")
+        st.markdown("• Demographic insights for targeting")
         st.markdown("• Geographic performance analysis")
         st.markdown("• Psychographic behavior patterns")
         st.markdown("• Actionable optimization plans")
